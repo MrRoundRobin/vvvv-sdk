@@ -359,6 +359,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Addonpack", "Addonpack.cspr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Round", "nodes\plugins\Value\Round\Round.csproj", "{73F05298-2164-42D9-936B-3E5A0BBE5BFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SyncNetworkIO", "nodes\plugins\Network\SyncNetworkIO\SyncNetworkIO.csproj", "{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -2077,6 +2079,10 @@ Global
 		{73F05298-2164-42D9-936B-3E5A0BBE5BFA}.Release|x64.Build.0 = Release|x64
 		{73F05298-2164-42D9-936B-3E5A0BBE5BFA}.Release|x86.ActiveCfg = Release|x86
 		{73F05298-2164-42D9-936B-3E5A0BBE5BFA}.Release|x86.Build.0 = Release|x86
+		{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D}.Release|x64.ActiveCfg = Release|Any CPU
+		{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2254,5 +2260,6 @@ Global
 		{E051BB88-5211-4EF7-962B-59657D171297} = {208A7E0A-6CDC-44F9-B482-1104FDE1354B}
 		{A63D2EA4-D87C-459B-B57F-19A76A7ADAF0} = {79F358A1-1BB1-46AF-B9A0-C75B333CF873}
 		{73F05298-2164-42D9-936B-3E5A0BBE5BFA} = {18144DA3-A165-49FA-800E-B768D3C371CA}
+		{BAE0B6A5-621C-4D0C-8FEF-E0E6EB9D0F5D} = {57C62A88-1341-4E76-8B5B-6585921EEC8C}
 	EndGlobalSection
 EndGlobal

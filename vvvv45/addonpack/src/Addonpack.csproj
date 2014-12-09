@@ -303,6 +303,10 @@
       <Project>{ECC59838-A588-425E-9846-E76639E8C0D3}</Project>
       <Name>JSONAsXElement</Name>
     </ProjectReference>
+    <ProjectReference Include="nodes\plugins\Network\SyncNetworkIO\SyncNetworkIO.csproj">
+      <Project>{bae0b6a5-621c-4d0c-8fef-e0e6eb9d0f5d}</Project>
+      <Name>SyncNetworkIO</Name>
+    </ProjectReference>
     <ProjectReference Include="nodes\plugins\Network\Syslog\Syslog.csproj">
       <Project>{66841413-5fb8-4e5e-abf7-dba3f09a9bf7}</Project>
       <Name>Syslog</Name>
