@@ -2,24 +2,19 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading;
-using VVVV.Core.Logging;
 using VVVV.PluginInterfaces.V2;
 using VVVV.PluginInterfaces.V2.Graph;
-using VVVV.Utils.Concurrent;
 using VVVV.Utils.OSC;
 
 namespace VVVV.Nodes
 {
     internal class IOManager
     {
-        private static readonly Lazy<IOManager> lazy = new Lazy<IOManager>(() => new IOManager());
+        private static readonly Lazy<IOManager> Lazy = new Lazy<IOManager>(() => new IOManager());
 
         private IHDEHost _HDEHost;
 
@@ -38,6 +33,7 @@ namespace VVVV.Nodes
         {
             public int Port;
             public string Name;
+            public string SubName;
             public ArrayList Value;
         }
 
@@ -53,7 +49,7 @@ namespace VVVV.Nodes
         {
             get
             {
-                return lazy.Value;
+                return Lazy.Value;
             }
         }
 
@@ -70,23 +66,29 @@ namespace VVVV.Nodes
 
         private void ExposedNodeAdded(INode2 node)
         {
-            var pin = node.FindPin(PinNameFromNode(node));
+            PinNameFromNode(node).ForEach(pinName =>
+            {
+                var pin = node.FindPin(pinName);
 
-            _exposedNodes.Add(pin, node);
+                _exposedNodes.Add(pin, node);
 
-            node.FindPin(PinNameFromNode(node)).Changed += PinChanged;
+                node.FindPin(pinName).Changed += PinChanged;
+            });
         }
 
         private void ExposedNodeRemoved(INode2 node)
         {
             try
             {
-                _exposedNodes.Remove(node.FindPin(PinNameFromNode(node)));
-                node.FindPin(PinNameFromNode(node)).Changed -= PinChanged;
+                PinNameFromNode(node).ForEach(pinName =>
+                {
+                    _exposedNodes.Remove(node.FindPin(pinName));
+                    node.FindPin(pinName).Changed -= PinChanged;
+                });
             }
             catch (ArgumentNullException)
             {
-                System.Diagnostics.Debug.WriteLine("ahhhhhh sub patch gelöscht?!");
+                Debug.WriteLine("ahhhhhh sub patch gelöscht?!");
             }
 
         }
@@ -117,9 +119,22 @@ namespace VVVV.Nodes
             var bundle = new OSCBundle();
             var message = new OSCMessage("/"+ node.LabelPin.Spread);
 
+            var sub = "";
+
+            if (pin.Name == "Y Input Value")
+            {
+                message.Address += "/Y";
+                sub = "Y";
+            }
+            else if (pin.Name == "X Input Value")
+            {
+                message.Address += "/X";
+                sub = "X";
+            }
+
             var values = new ArrayList();
 
-            for (int i = 0; i < pin.SliceCount; i++)
+            for (var i = 0; i < pin.SliceCount; i++)
             {
                 message.Append(pin[i]);
                 values.Add(pin[i]);
@@ -129,6 +144,7 @@ namespace VVVV.Nodes
             {
                 Port = config.LocalPort,
                 Name = node.LabelPin.Spread,
+                SubName = sub,
                 Value = values
             });
 
@@ -143,25 +159,35 @@ namespace VVVV.Nodes
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debugger.Break();    
+                Debugger.Break();    
             }
         }
 
-        private string PinNameFromNode(INode2 node)
+        private List<string> PinNameFromNode(INode2 node)
         {
-            string pinName = "";
-            if (node.NodeInfo.Systemname == "IOBox (Value Advanced)")
-                pinName = "Y Input Value";
-            else if (node.NodeInfo.Systemname == "IOBox (String)")
-                pinName = "Input String";
-            else if (node.NodeInfo.Systemname == "IOBox (Color)")
-                pinName = "Color Input";
-            else if (node.NodeInfo.Systemname == "IOBox (Enumerations)")
-                pinName = "Input Enum";
-            else if (node.NodeInfo.Systemname == "IOBox (Node)")
-                pinName = "Input Node";
+            var pins = new List<string>();
+            switch (node.NodeInfo.Systemname)
+            {
+                case "IOBox (Value Advanced)":
+                    pins.Add("Y Input Value");
+                    pins.Add("X Input Value");
+                    break;
+                case "IOBox (String)":
+                    pins.Add("Input String");
+                    break;
 
-            return pinName;
+                case "IOBox (Color)":
+                    pins.Add("Color Input");
+                    break;
+
+                case "IOBox (Enumerations)":
+                    pins.Add("Input Enum");
+                    break;
+                case "IOBox (Node)":
+                    pins.Add("Input Node");
+                    break;
+            }
+            return pins;
         }
 
         private void StartListening(int port)
@@ -212,7 +238,7 @@ namespace VVVV.Nodes
             {
                 _HDEHost.ExposedNodeService.Nodes.ToList().ForEach(node =>
                 {
-                    PinChanged(node.FindPin(PinNameFromNode(node)), new EventArgs());
+                    PinNameFromNode(node).ForEach(pinName => PinChanged(node.FindPin(pinName), new EventArgs()));
                 });
             }
 
@@ -253,20 +279,24 @@ namespace VVVV.Nodes
                         var messages = data.Values;
                         foreach (OSCMessage message in messages)
                         {
+                            var path = message.Address.Substring(1).Split('/');
                             _queue.Add(new ChangeMessage()
                             {
                                 Port = port,
-                                Name = message.Address.Substring(1),
+                                Name = path[0],
+                                SubName = (path.Count() > 1) ? path[1]  : "",
                                 Value = message.Values
                             });
                         }
                     }
                     else
                     {
+                        var path = data.Address.Substring(1).Split('/');
                         _queue.Add(new ChangeMessage()
                         {
                             Port = port,
-                            Name = data.Address.Substring(1),
+                            Name = path[0],
+                            SubName = (path.Count() > 1) ? path[1] : "",
                             Value = data.Values
                         });
                     }
@@ -274,7 +304,7 @@ namespace VVVV.Nodes
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine(e.Message);
+                Debug.WriteLine(e.Message);
                 //_receiver[port].Close();
                 return;
             }
@@ -297,16 +327,18 @@ namespace VVVV.Nodes
                 {
                     var pins = new List<IPin2>();
                     var config = kv.Value;
+
                     var path = kv.Key;
 
                     //search only nodes in current patch
                     if (!config.Recursive)
                     {
-                        _exposedNodes.Where(n => n.Value.Parent.GetNodePath(false) == path && n.Value.LabelPin.Spread == name).Select(n => n.Key).ToList().ForEach(pin => pins.Add(pin));
+                        _exposedNodes.Where(n => n.Value.Parent.GetNodePath(false) == path && n.Value.LabelPin.Spread == name && n.Key == n.Value.FindPin(PinNameFromNode(n.Value)[message.SubName == "X" ? 1 : 0]))
+                        .Select(n => n.Key).ToList().ForEach(pin => pins.Add(pin));
                     }
                     else  // search nodes in this an sub patches
                     {
-                        _exposedNodes.Where(n => path.StartsWith(n.Value.Parent.GetNodePath(false)) && n.Value.LabelPin.Spread == name).Select(n => n.Key).ToList().ForEach(pin => pins.Add(pin));
+                        _exposedNodes.Where(n => path.StartsWith(n.Value.Parent.GetNodePath(false)) && n.Value.LabelPin.Spread == name).Select(n => n.Value.FindPin(PinNameFromNode(n.Value)[message.SubName == "X" ? 1 : 0])).ToList().ForEach(pin => pins.Add(pin));
                     }
 
                     if (pins.Count == 0) return;
@@ -316,9 +348,9 @@ namespace VVVV.Nodes
                     foreach (var v in data)
                     {
                         if (v is float)
-                            values += ((float)v).ToString(System.Globalization.CultureInfo.InvariantCulture) + ",";
+                            values += ((float)v).ToString(CultureInfo.InvariantCulture) + ",";
                         else if (v is double)
-                            values += ((double)v).ToString(System.Globalization.CultureInfo.InvariantCulture) + ",";
+                            values += ((double)v).ToString(CultureInfo.InvariantCulture) + ",";
                         else
                             values += v.ToString() + ",";
                     }
